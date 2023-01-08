@@ -5,6 +5,8 @@ import com.clay.exception.UserNotFoundException;
 import com.clay.model.Permission;
 import com.clay.model.UserAction;
 import com.clay.repo.PermissionRepository;
+import com.clay.repo.UserActionRepository;
+import com.clay.service.PermissionService;
 import com.clay.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -25,10 +27,10 @@ import static com.clay.util.Constant.SET;
 public class BitConverter {
 
     @Autowired
-    private UserService userService;
+    private PermissionRepository permissionRepository;
 
     @Autowired
-    private PermissionRepository permissionRepository;
+    private UserActionRepository actionRepository;
 
     private Map<String, BiFunction<BigInteger, List<Integer>, BigInteger>> actions;
 
@@ -39,67 +41,34 @@ public class BitConverter {
         actions.put(RESET, bitMaskResetFunction);
     }
 
-    public BigInteger buildUserActionBitmask(List<UserAction> userActions) {
-  /*      List<Permission> permissions = userService.getUserById(userId).getPermissions();
-        Map<Integer, List<Integer>> permissionActionMapping = permissions.stream() //permission - action mapping
-                .collect(
-                        Collectors.toMap(
-                                Permission::getId,
-                                permission -> permission.getUserActions().stream().map(Enum::ordinal)
-                                        .collect(Collectors.toList())
-                        )
-                );
-*/
-        /*Map<BigInteger, List<Integer>> defaultUsageBitMaskAndOrdinalMapping = new HashMap<>();
-        for (Map.Entry<Integer, List<Integer>> permissionEntry : permissionActionMapping.entrySet()) {
+    public BigInteger buildUserActionBitmask(String action, Long permissionId, List<String> userActions) throws PermissionNotFoundException {
+        com.clay.entity.Permission permissionFromDb = permissionRepository.findById(permissionId)
+                .orElseThrow(() -> new PermissionNotFoundException("Permission Not Found"));
 
-            try {
-                com.clay.entity.Permission permission = permissionRepository.findById(permissionEntry.getKey())
-                        .orElseThrow(() -> new PermissionNotFoundException("Permission Not Found"));
+        BigInteger defaultUserActionBitmask = permissionFromDb.getUserActionsBitmask();
+        List<Integer> userActionOrdinals = actionRepository.getOrdinalByPermissionAndNameIn(permissionId, userActions);
 
-                defaultUsageBitMaskAndOrdinalMapping.put(permission.getUserActionsBitmask(), permissionEntry.getValue());
+        if (!userActionOrdinals.isEmpty()) {
+            defaultUserActionBitmask = actions.get(action).apply(defaultUserActionBitmask, userActionOrdinals);
+        }
 
-            } catch (PermissionNotFoundException e) {
-                log.error("Permission Not Found");
-                return null;
-            }
-        }*/
-
-        /*if (!defaultUsageBitMaskAndOrdinalMapping.isEmpty()) {
-            defaultUsageBitMaskAndOrdinalMapping.entrySet()
-                    .stream()
-                    .map(
-                            entry -> entry.getValue().stream()
-                                    .map(value -> actions.get(bitmaskAction).apply(defaultUsageBitMask, ordinals))
-                    )
-                    .collect(Collectors.toMap(entry -> entry.));
-
-            defaultUsageBitMask = actions.get(bitmaskAction).apply(defaultUsageBitMask, ordinals);
-        }*/
-
-        return null;
-    }
-
-    public List<UserAction> buildUserActions(BigInteger bitmaskValue) {
-
-        return Collections.emptyList();
+        return defaultUserActionBitmask;
     }
 
     /**
-     * method to extract usage reason from bitmask
+     * method to capture Actions from bitmask
      */
-  /*  public List<String> buildUsageReasons(BigInteger usageReasonsBitMask) {
-        List<Integer> ordinals = getOrdinals(usageReasonsBitMask);
+    public List<String> buildUserActions(Long permissionId, BigInteger bitmaskValue) {
+        List<Integer> ordinals = getOrdinals(bitmaskValue);
 
-        return userGroupService.getAllReasonsByOrdinals(ordinals);
-    }*/
-
+        return actionRepository.getActionNamesByPermissionIdAndOrdinals(permissionId, ordinals);
+    }
 
     /**
-     * Method to extract ordinals from bitmask
+     * Method to capture ordinals from bitmask
      */
-    public List<Integer> getOrdinals(BigInteger usageReasonsBitMask) {
-        String reversedBitmask = StringUtils.reverse(usageReasonsBitMask.toString(2));
+    public List<Integer> getOrdinals(BigInteger actionBitMask) {
+        String reversedBitmask = StringUtils.reverse(actionBitMask.toString(2));
 
         List<Integer> ordinals = new ArrayList<>();
         for (int i = 0; i < reversedBitmask.length(); i++) {
@@ -110,22 +79,22 @@ public class BitConverter {
         return ordinals;
     }
 
-    private BiFunction<BigInteger, List<Integer>, BigInteger> bitMaskSetFunction = (defaultUsageBitMask, ordinals) -> {
-        defaultUsageBitMask = defaultUsageBitMask.clearBit(0);
+    private final BiFunction<BigInteger, List<Integer>, BigInteger> bitMaskSetFunction = (defaultUserActionBitMask, ordinals) -> {
+        defaultUserActionBitMask = defaultUserActionBitMask.clearBit(0);
         for (Integer ordinal : ordinals) {
-            defaultUsageBitMask = defaultUsageBitMask.setBit(ordinal);
+            defaultUserActionBitMask = defaultUserActionBitMask.setBit(ordinal);
         }
-        return defaultUsageBitMask;
+        return defaultUserActionBitMask;
     };
 
-    private BiFunction<BigInteger, List<Integer>, BigInteger> bitMaskResetFunction = (defaultUsageBitMask, ordinals) -> {
+    private final BiFunction<BigInteger, List<Integer>, BigInteger> bitMaskResetFunction = (defaultUserActionBitMask, ordinals) -> {
         for (Integer ordinal : ordinals) {
-            defaultUsageBitMask = defaultUsageBitMask.clearBit(ordinal);
+            defaultUserActionBitMask = defaultUserActionBitMask.clearBit(ordinal);
         }
 
-        if (!defaultUsageBitMask.toString(2).contains(BigInteger.ONE.toString())) {
-            defaultUsageBitMask = defaultUsageBitMask.setBit(BigInteger.ZERO.intValue());
+        if (!defaultUserActionBitMask.toString(2).contains(BigInteger.ONE.toString())) {
+            defaultUserActionBitMask = defaultUserActionBitMask.setBit(BigInteger.ZERO.intValue());
         }
-        return defaultUsageBitMask;
+        return defaultUserActionBitMask;
     };
 }

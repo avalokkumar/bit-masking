@@ -1,14 +1,16 @@
 package com.clay.entity;
 
 import lombok.Data;
+import lombok.ToString;
 
 import javax.persistence.*;
+import java.io.Serializable;
 import java.util.List;
 
 @Data
 @Entity
 @Table(name = "user")
-public class User extends Auditable {
+public class User extends Auditable implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -24,6 +26,6 @@ public class User extends Auditable {
     private String phoneNumber;
 
     @Column(name = "permissions")
-    @OneToMany(cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<Permission> permissions;
 }

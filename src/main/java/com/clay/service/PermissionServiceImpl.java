@@ -21,7 +21,7 @@ public class PermissionServiceImpl implements PermissionService {
     @Override
     public List<Permission> getAllPermissionsByUserId(Long userId) {
         List<com.clay.entity.Permission> permissionsEntities = permissionRepository.findByUserId(userId);
-        return permissionMapper.mapAll(permissionsEntities);
+        return permissionMapper.mapTo(permissionsEntities);
     }
 
     @Override

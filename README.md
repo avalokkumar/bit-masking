@@ -3,7 +3,7 @@ This project is created demonstrates how to use bit masking(flipping the bits to
 
 ## Spring Service for Managing Users and Permissions
 
-This service provides APIs for creating, updating, and deleting users and assigning permissions to them. It is built using the Spring framework and uses a MySQL database to store user and permission data.
+This service provides APIs for creating, updating, and deleting users and assigning permissions to them. It is built using the Spring framework and uses a MySQL database to store user, permission and actions data.
 
 ## Prerequisites
 
